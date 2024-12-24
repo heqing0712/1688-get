@@ -1,23 +1,27 @@
+import type { ProxyOptions } from 'vite'
 import path from 'node:path'
-import Vue from '@vitejs/plugin-vue'
 
+import Vue from '@vitejs/plugin-vue'
 import Unocss from 'unocss/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import Components from 'unplugin-vue-components/vite'
-import VueRouter from 'unplugin-vue-router/vite'
 
+import VueRouter from 'unplugin-vue-router/vite'
 import { defineConfig } from 'vite'
-import type { ProxyOptions } from 'vite'
+
 type ProxyItem = [string, string]
 type ProxyList = ProxyItem[]
 type ProxyTargetList = Record<string, ProxyOptions & { rewrite: (path: string) => string }>
-  // 代理配置
-  const proxy = createProxy([
+// 代理配置
+const proxy = createProxy([
 
-    ['/api', 'https://p4psearch.1688.com']
-    // [VITE_API_URL_PREFIX, API_URL],
-    // [VITE_MOCK_URL_PREFIX, VITE_MOCK_API_URL],
-  ])
+  ['/api', 'https://p4psearch.1688.com'],
+  ['/openapi', 'https://gw.open.1688.com/openapi'],
+  ['/gwapi', 'https://api-gw.onebound.cn'],
+  ['/nextapi', 'http://localhost:3000'],
+  // [VITE_API_URL_PREFIX, API_URL],
+  // [VITE_MOCK_URL_PREFIX, VITE_MOCK_API_URL],
+])
 /**
  * 生成代理
  * @param list
@@ -35,7 +39,7 @@ export function createProxy(list: ProxyList = []) {
       ws: true,
       rewrite: (path: string) => path.replace(new RegExp(`^${prefix}`), ''),
       // https is require secure=false
-      ...(isHttps ? { secure: false } : {})
+      ...(isHttps ? { secure: false } : {}),
     }
   }
   return ret
@@ -60,13 +64,13 @@ export default defineConfig({
   server: {
     open: true,
     // 端口
-   // port,
+    // port,
     // 监听所有本地 IP
     host: true,
     // 是否开启 https
     https: false,
     // 代理
-    proxy
+    proxy,
   },
   plugins: [
     Vue(),

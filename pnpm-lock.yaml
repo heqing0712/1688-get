@@ -20,6 +20,9 @@ importers:
       element-plus:
         specifier: ^2.9.0
         version: 2.9.0(vue@3.5.13(typescript@5.6.3))
+      js-table2excel:
+        specifier: ^1.1.2
+        version: 1.1.2
       vue:
         specifier: ^3.5.13
         version: 3.5.13(typescript@5.6.3)
@@ -2029,6 +2032,9 @@ packages:
   jiti@2.0.0-beta.3:
     resolution: {integrity: sha512-pmfRbVRs/7khFrSAYnSiJ8C0D5GvzkE4Ey2pAvUcJsw1ly/p+7ut27jbJrjY79BpAJQJ4gXYFtK6d1Aub+9baQ==}
     hasBin: true
+
+  js-table2excel@1.1.2:
+    resolution: {integrity: sha512-E5QcPLjlF7qcqqF+DgaPxj9b+lQsItMqkwcXKpODtZ8zo5f07huuvem3Ek1WYzOcSOalU7RwEAG/66WQ5PVfWA==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -5220,6 +5226,8 @@ snapshots:
   jiti@1.21.6: {}
 
   jiti@2.0.0-beta.3: {}
+
+  js-table2excel@1.1.2: {}
 
   js-tokens@4.0.0: {}
 

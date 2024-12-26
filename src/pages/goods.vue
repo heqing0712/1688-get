@@ -6,16 +6,11 @@ import { exportJsonToExcel, exportJsonToExcelx } from './js/outExcel'
 
 const url = '/gwapi/1688/item_search'
 const keyword = ref('避孕套')
-/**
- * 缓存
- */
-const cacheTbStr = localStorage.getItem('tb')
-const cacheTb = cacheTbStr ? JSON.parse(cacheTbStr) : []
 
 /**
  * 表格数据
  */
-const tableData = ref(formatData(cacheTb))
+const tableData = ref(formatData(getGoodsListCache()))
 
 /**
  * 分页
@@ -25,6 +20,25 @@ const pageNum = ref(tableData.value.length / 20 || 1)
  * 加载中
  */
 const loading = ref(false)
+
+/**
+ * 获取商品缓存
+ */
+function getGoodsListCache() {
+  const cacheTbStr = localStorage.getItem('goodsList')
+  return cacheTbStr ? JSON.parse(cacheTbStr) : []
+}
+
+/**
+ * 设置商品列表缓存
+ * @param v
+ */
+function setGoodsListCache(v) {
+  if (v) {
+    formatData(v)
+  }
+  localStorage.setItem('goodsList', JSON.stringify(v))
+}
 
 /**
  * 获取列表数据
@@ -65,15 +79,6 @@ function handleGetList() {
 }
 
 /**
- * 缓存
- */
-watch(tableData, (v) => {
-  localStorage.setItem('tb', JSON.stringify(v))
-}, {
-  deep: true,
-})
-
-/**
  * 获取商品详情
  *
  * https://api-gw.onebound.cn/1688/item_get/
@@ -83,9 +88,9 @@ function getProductDetail(item: any) {
   const params = {
     key: 't3714949574',
     secret: '95743201',
-    // lang: 'zh-CN',
-    lang: 'en',
-    num_iid: item.num_iid,
+    lang: 'zh-CN',
+    // lang: 'en',
+    num_iid: item.id,
   }
   request({
     method: 'get',
@@ -95,7 +100,8 @@ function getProductDetail(item: any) {
     console.log(res)
     item.loading = false
     item.detail = res
-    handleToDownload(res, item)
+    setGoodsListCache(tableData.value)
+    // handleToDownload(res, item)
   })
 }
 
@@ -123,7 +129,7 @@ function handleToDownload(params: any, item: any) {
  * 删除缓存
  */
 function handleDeleteCache() {
-  localStorage.setItem('tb', '')
+  setGoodsListCache('')
   tableData.value = []
 }
 
@@ -133,64 +139,88 @@ function handleDeleteCache() {
 function formatData(list: any) {
   list.map((d) => {
     const imgs = d?.detail?.item?.item_imgs
+    const brand = d?.detail?.item?.props?.[0]?.value
+    if (brand) {
+      d.brand = brand
+    }
     if (imgs) {
       d.imgUrlList = imgs.map((d) => { return d.url })
     }
     const imgUrl = d.imgUrlList?.[0]
 
     if (imgUrl) {
-      // imgToBase64(imgUrl, d)
       d.imgUrl = imgUrl
     }
+    if (d.desc) {
+      d.company = d.desc
+    }
+    d.loading = false
     d.downloading = false
   })
   return list
 }
 
 /**
- * 搜索
- */
-function handleSearch() {
-  pageNum.value = 1
-  tableData.value = []
-  handleGetListData(pageNum.value)
-}
-
-/**
  * 导出文件
  */
 function handleExcel() {
-  const header = [{
-    title: '索引',
-    key: 'index',
+  const header = [
 
-  }, {
+    {
 
-    title: '商品ID',
-    key: 'id',
-  }, {
+      title: '商品ID',
+      key: 'id',
+    },
+    {
 
-    title: '图片',
-    key: 'pic',
-    type: 'image',
-  }, {
+      title: '图片',
+      key: 'pic',
+      type: 'image',
+    },
+    {
 
-    title: '标题',
-    key: 'title',
-  }, {
+      title: '标题',
+      key: 'title',
+    },
+    {
 
-    title: '价格',
-    key: 'price',
-  }]
+      title: '公司',
+      key: 'company',
+    },
+    {
+
+      title: '品牌',
+      key: 'brand',
+    },
+    {
+
+      title: '价格',
+      key: 'price',
+    },
+    {
+
+      title: '销量',
+      key: 'sales',
+    },
+  ]
 
   const data = tableData.value.map((d, i) => {
+    let sales = d.sales.replace('+件', '')
+    if (sales.includes('万')) {
+      const val = sales.split('万')[0]
+      sales = val * 10000
+    }
+
     return {
-      index: i + 1,
-      id: d.num_iid,
+
+      id: d.id,
       title: d.title,
       price: d.price,
       pic: d.imgUrl,
-      size: [100, 100],
+      sales,
+      brand: d.brand,
+      company: d.company,
+      size: [200, 200],
     }
   })
 
@@ -206,51 +236,48 @@ function handleGetListData(n = 1) {
   handleGetList()
 }
 
-/**
- * 图片转base64
- * @param imgUrl
- */
-async function imgToBase64(imgUrl: string, item: any) {
-  fetch(imgUrl)
-    .then(response => response.blob())
-    .then((blob) => {
-      const reader = new FileReader()
-      reader.readAsDataURL(blob)
-      reader.onloadend = () => {
-        const base64data = reader.result
-        item.imgBase64 = base64data
-      }
-    })
-}
+setGoodsListCache(tableData.value)
 
-console.log({
-  tableData: tableData.value,
-})
+/**
+ * 获取商品列表
+ */
+function getGoodsList() {
+  loading.value = true
+  request({
+    method: 'get',
+    url: '/nextapi/api/goodsList',
+
+  }).then((res) => {
+    if (res.status === 200) {
+      const list = res.data.list.map((d) => {
+        d.imgUrlList = [d.imgUrl]
+        return d
+      })
+
+      setGoodsListCache(list)
+      tableData.value = list
+    }
+    loading.value = false
+  })
+}
 </script>
 
 <template>
   <div class="containerx">
     <div class="form-box">
       <div class="form-item">
-        关键词：
+        总数：{{ tableData.length }}
       </div>
       <div class="form-item">
-        <el-input v-model="keyword" size="default" />
-      </div>
-      <div class="form-item">
-        <el-button size="default" type="primary" @click="handleSearch">
-          搜索
+        <el-button size="small" type="primary" @click="getGoodsList">
+          加载
         </el-button>
-        <el-button v-if="tableData.length" size="default" type="primary" :loading="loading" @click="handleGetListData(pageNum + 1)">
-          加载分页({{ pageNum + 1 }})
-        </el-button>
-        <el-button v-if="tableData.length" size="default" type="primary" @click="handleDeleteCache">
-          删除缓存
-        </el-button>
-
-        <el-button v-if="tableData.length" size="default" type="primary" @click=" handleExcel">
+        <el-button :disabled="!tableData.length" size="small" type="primary" @click=" handleExcel">
           导出表格
         </el-button>
+        <!-- <el-button v-if="tableData.length" size="small" type="primary" @click="handleDeleteCache">
+          删除缓存
+        </el-button> -->
         <!-- <el-button size="default" type="primary" @click="handleToDownload">
           下载测试
         </el-button> -->
@@ -261,10 +288,8 @@ console.log({
       <el-table :data="tableData" style="width: 100%" height="calc(100Vh - 55px)">
         <el-table-column type="index" label="索引" width="70px" />
 
-        <el-table-column prop="num_iid" label="商品id" />
-
-        <el-table-column prop="title" label="标题" />
-        <el-table-column prop="imgUrl" label="图片" width="400px">
+        <el-table-column prop="id" label="商品id" />
+        <el-table-column prop="imgUrl" label="图片" width="120px">
           <template #default="scope">
             <div class="img-boxes">
               <!-- <img v-for="item in scope.row.imgUrlList" width="100px" :src="item"> -->
@@ -283,8 +308,13 @@ console.log({
             </div>
           </template>
         </el-table-column>
+        <el-table-column prop="title" label="标题" />
+
+        <el-table-column prop="company" label="公司" />
+        <el-table-column prop="brand" label="品牌" />
         <el-table-column prop="price" label="价格" />
-        <el-table-column prop="address" label="操作" width="280px">
+        <el-table-column prop="sales" label="销量" />
+        <el-table-column prop="address" label="操作" width="200px">
           <template #default="scope">
             <div class="acts">
               <a class="act" :href="scope.row.detail_url" target="_blank">
@@ -297,7 +327,7 @@ console.log({
               <!-- <el-button :disabled="!!scope.row.detail" size="small" type="primary" :loading="scope.row.loading" @click="getProductDetail(scope.row)">
                 获取详情
               </el-button> -->
-              <el-button v-if="!scope.row.downloaded" size="small" type="primary" :loading="scope.row.downloading || scope.row.loading" @click="getProductDetail(scope.row)">
+              <el-button v-if="!scope.row.detail" size="small" type="primary" :loading="scope.row.downloading || scope.row.loading" @click="getProductDetail(scope.row)">
                 下载数据
               </el-button>
 
@@ -313,6 +343,10 @@ console.log({
 </template>
 
 <style lang="scss" scoped>
+.form-box {
+  display: flex;
+  justify-content: space-between;
+}
 .containerx {
   padding: 10px;
   .acts {
